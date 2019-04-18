@@ -67,12 +67,13 @@ SET autocommit=1;
 END
 
 切分+数据回迁sp
-CREATE  PROCEDURE `test_frist_pro_prefetch`(in p_tablename varchar(50),out p_status int,out p_text varchar(200))
 BEGIN
 DECLARE v_count int DEFAULT 0;
 DECLARE v_count1 int DEFAULT 0;
 DECLARE v_count2 int DEFAULT 0;
 DECLARE v_day varchar(50) DEFAULT '1900-01-01';
+DECLARE v_prefetch int DEFAULT 0;
+DECLARE v_data_checktime date DEFAULT '1900-01-01';
 DECLARE v_starttime datetime DEFAULT '1900-01-01';
 DECLARE v_tablename varchar(50) DEFAULT 'fuckyou';
 DECLARE v_tablename_new varchar(50) DEFAULT 'fuckyou';
@@ -88,7 +89,9 @@ SET autocommit=1;
 END;
 SET autocommit=0;
 label_a:BEGIN
-SET    v_tablename=p_tablename;
+SET v_tablename=p_tablename;
+SET v_prefetch=p_prefetch;
+SET v_data_checktime=p_data_checktime;
 SET v_starttime=NOW();
 
 select count(1),create_sql,insert_sql,delete_sql from list_table
@@ -107,7 +110,7 @@ SET p_status=3,p_text=CONCAT(v_tablename,'数据库中不存在，无法备份！');
 LEAVE label_a;
 END    IF;
 
-set v_tablename_new= CONCAT(v_tablename,'_',date(NOW())+0);
+set v_tablename_new= CONCAT(v_tablename,'_',date(v_data_checktime)+0);
 
 select count(1) from table_backlog
 where tablename =v_tablename_new into v_count2;
@@ -129,7 +132,7 @@ PREPARE stmt1 FROM @sqlstr1;
 EXECUTE stmt1;
 DEALLOCATE PREPARE stmt1;
 
-SET v_day=CONCAT("'",DATE_SUB(DATE(now()),INTERVAL 10 DAY),"'");
+SET v_day=CONCAT("'",DATE_sub(DATE(v_data_checktime),INTERVAL v_prefetch DAY),"'");
 SET @sqlstr3=REPLACE(REPLACE(v_insert_sql,'sday',v_day),'tablename',v_tablename_new);
 
 insert into error_log
